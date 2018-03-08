@@ -14,15 +14,17 @@ public class JeopardyClient {
 	ObjectOutputStream objOutputStream = null;
 	DataInputStream datInputStream = null;
 	DataOutputStream datOutputStream = null;
+	String playerID;
 	boolean isConnected = false;
 	
 	public JeopardyClient() {
-		
+		startGame();
 	}
 	
 	public void startGame() {
 		while (!isConnected) {
 			try {
+				//Stage one
 				socket = new Socket("localHost", 5557);
 				System.out.println("Connected");
 				isConnected = true;
@@ -31,11 +33,38 @@ public class JeopardyClient {
 				datInputStream = new DataInputStream(socket.getInputStream());
 				datOutputStream = new DataOutputStream(socket.getOutputStream());
 				
-				String tempString = null;
+				String tempString = "game not started";
+				
+				playerID = datInputStream.readUTF();
+				System.out.println("You are player: " + playerID);
 				
 				while(!tempString.equals("Game Started")) {
 					tempString = datInputStream.readUTF();
-					System.out.println("Waiting on player: " + tempString);
+					if(!tempString.equals("Game Started")) {
+						System.out.println(tempString);
+					}
+				}
+				
+				String question;
+				boolean gameOver = false;
+				boolean questionOver = false;
+				//Stage two
+				while(!gameOver) {
+					question = datInputStream.readUTF();
+					questionOver = false;
+					while(!questionOver) {
+						//getForm
+						if(guessForm)
+						{
+							//pring guess + incorrect
+						}
+						if(answerForm)
+						{
+							//print ID guessed answer correct won 200 dollars
+							break;
+							//sendAnswerForm
+						}
+					}
 				}
 			}
 			catch (SocketException se ) {
