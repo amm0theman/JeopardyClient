@@ -1,5 +1,7 @@
 package jeopardyClient;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -10,6 +12,8 @@ public class JeopardyClient {
 	Socket socket = null;
 	ObjectInputStream objInputStream = null;
 	ObjectOutputStream objOutputStream = null;
+	DataInputStream datInputStream = null;
+	DataOutputStream datOutputStream = null;
 	boolean isConnected = false;
 	
 	public JeopardyClient() {
@@ -23,6 +27,16 @@ public class JeopardyClient {
 				System.out.println("Connected");
 				isConnected = true;
 				objOutputStream = new ObjectOutputStream(socket.getOutputStream());
+				objInputStream = new ObjectInputStream(socket.getInputStream());
+				datInputStream = new DataInputStream(socket.getInputStream());
+				datOutputStream = new DataOutputStream(socket.getOutputStream());
+				
+				String tempString = null;
+				
+				while(!tempString.equals("Game Started")) {
+					tempString = datInputStream.readUTF();
+					System.out.println("Waiting on player: " + tempString);
+				}
 			}
 			catch (SocketException se ) {
 				se.printStackTrace();
