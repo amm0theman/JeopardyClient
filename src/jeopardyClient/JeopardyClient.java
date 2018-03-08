@@ -23,7 +23,7 @@ public class JeopardyClient {
 	public void startGame() {
 		while (!isConnected) {
 			try {
-				socket = new Socket("localHost", 5555);
+				socket = new Socket("localHost", 5557);
 				System.out.println("Connected");
 				isConnected = true;
 				objOutputStream = new ObjectOutputStream(socket.getOutputStream());
