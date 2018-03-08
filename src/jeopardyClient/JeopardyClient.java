@@ -7,6 +7,12 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.Scanner;
+
+import jeopardyForms.AnswerForm;
+import jeopardyForms.GuessForm;
+import jeopardyForms.JeopardyForm;
+import jeopardyForms.QuestionForm;
 
 public class JeopardyClient {
 	Socket socket = null;
@@ -14,14 +20,21 @@ public class JeopardyClient {
 	ObjectOutputStream objOutputStream = null;
 	DataInputStream datInputStream = null;
 	DataOutputStream datOutputStream = null;
-	String playerID;
+	Integer playerID;
 	boolean isConnected = false;
 	
+	int[] playerDollars;
+	
 	public JeopardyClient() {
-		startGame();
+		try {
+			startGame();
+		}
+		catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		}
 	}
 	
-	public void startGame() {
+	public void startGame() throws ClassNotFoundException {
 		while (!isConnected) {
 			try {
 				//Stage one
@@ -35,7 +48,7 @@ public class JeopardyClient {
 				
 				String tempString = "game not started";
 				
-				playerID = datInputStream.readUTF();
+				playerID = datInputStream.readInt();
 				System.out.println("You are player: " + playerID);
 				
 				while(!tempString.equals("Game Started")) {
@@ -44,26 +57,49 @@ public class JeopardyClient {
 						System.out.println(tempString);
 					}
 				}
-				
+				//For tracking player dollar amounts
+				int tempInt = datInputStream.readInt();
+				playerDollars = new int[tempInt];
+				for(int i = 0; i < playerDollars.length; i++) {
+					playerDollars[i] = 0;
+				}
+				//For questions storage and loop control
 				String question;
 				boolean gameOver = false;
 				boolean questionOver = false;
+				Scanner myScan = new Scanner(System.in);
+				
 				//Stage two
 				while(!gameOver) {
 					question = datInputStream.readUTF();
 					questionOver = false;
+					int dollarAmt = 0;
 					while(!questionOver) {
-						//getForm
-						if(guessForm)
-						{
-							//pring guess + incorrect
+						//get next question or guess or correct answer
+						JeopardyForm newForm = (JeopardyForm) objInputStream.readObject();
+						
+						if(newForm.returnFormType() == 0) {
+							QuestionForm myForm = (QuestionForm) newForm;
+							System.out.println(newForm.toString());
+							dollarAmt = myForm.dollarAmt;
 						}
-						if(answerForm)
+						//Get different clients guess and print it plus incorrect
+						if(newForm.returnFormType() == 1)
 						{
-							//print ID guessed answer correct won 200 dollars
+							System.out.println(newForm.toString());
+						}
+						if(newForm.returnFormType() == 2)
+						{
+							AnswerForm myAnswer = (AnswerForm) newForm;
+							System.out.println(newForm.toString());
+							playerDollars[myAnswer.playerID] += dollarAmt;
 							break;
-							//sendAnswerForm
 						}
+						System.out.println("Write your guess: ");
+						String myString = myScan.nextLine();
+						GuessForm myForm = new GuessForm();
+						myForm.playerID = playerID;
+						myForm.theGuess = myString;
 					}
 				}
 			}
