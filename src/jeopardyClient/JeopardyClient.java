@@ -9,16 +9,25 @@ import java.net.Socket;
 import jeopardyForms.JeopardyForm;
 
 public class JeopardyClient {
-	Socket socket = null;
-	ObjectInputStream objInputStream = null;
-	ObjectOutputStream objOutputStream = null;
-	DataInputStream datInputStream = null;
-	DataOutputStream datOutputStream = null;
-	Integer playerID;
-	boolean isConnected = false;
 	
-	int[] playerDollars;
 	
+	//*****************************************************************\\
+	//							   MEMBERS 							   \\
+	//_________________________________________________________________\\
+	Socket socket = null;						//For connection	
+	ObjectInputStream objInputStream = null;	//For receiving data from server	
+	ObjectOutputStream objOutputStream = null;	//For writing to the server		
+	DataInputStream datInputStream = null;		//For receiving data from server	
+	DataOutputStream datOutputStream = null;	//For writing to the server	
+	Integer playerID;							//To keep track of which player you are
+	int[] playerDollars;						//Keep track of players money
+	
+	
+	/*	Constructor
+	 *	Receives: N/A
+	 *	Returns: N/A
+	 *	Simply calls the game loop
+	 */	
 	public JeopardyClient() {
 		while(true) {
 			try {
@@ -30,6 +39,12 @@ public class JeopardyClient {
 		}
 	}
 	
+	
+	/*	Prints Results
+	 *	Receives: N/A
+	 *	Returns: N/A
+	 *	Method prints the results of a finished Jeopardy game
+	 */	
 	public void printResults(int _numPlayers) {
 		System.out.println("----------RESULTS----------");
 		for (int i = 0; i < _numPlayers; i++) {
@@ -39,26 +54,33 @@ public class JeopardyClient {
 		System.out.println("Enter to continue to the next game: ");
 	}
 	
+	
+	/*	Main game loop
+	 *	Receives: N/A
+	 *	Returns: N/A
+	 *	This method controls everything
+	 */	
 	public void startGame() throws ClassNotFoundException {
 			
-		//STAGE I.I -------------------------------------------------------
-		//Initialize connection and data streams
+		//*****************************************************************\\
+		//							CONNECTION INIT 					   \\
+		//_________________________________________________________________\\
 		try {
-					socket = new Socket("localhost", 5557);
-					isConnected = true;
-					
-					objOutputStream = new ObjectOutputStream(socket.getOutputStream());
-					objInputStream = new ObjectInputStream(socket.getInputStream());
-					datInputStream = new DataInputStream(socket.getInputStream());
-					datOutputStream = new DataOutputStream(socket.getOutputStream()); 
-		} catch(IOException e) {
+			socket = new Socket("localhost", 5557);
+			
+			objOutputStream = new ObjectOutputStream(socket.getOutputStream());
+			objInputStream = new ObjectInputStream(socket.getInputStream());
+			datInputStream = new DataInputStream(socket.getInputStream());
+			datOutputStream = new DataOutputStream(socket.getOutputStream()); 
+		} 
+		catch(IOException e) {
 			e.printStackTrace();
 		}
 		//-----------------------------------------------------------------
 				
-		//STAGE I.II -------------------------------------
-		//Tell the player who they are and start the game
-		//
+		//*****************************************************************\\
+		//							PLAYER INIT 						   \\
+		//_________________________________________________________________\\
 		String tempString = "game not started";
 		try {
 			playerID = datInputStream.readInt();
@@ -68,6 +90,7 @@ public class JeopardyClient {
 		}
 		System.out.println("You are player: " + playerID);
 		
+		//GAME START POINT****************************************************
 		while(!tempString.equals("Game Started")) {
 			try {
 				tempString = datInputStream.readUTF();
@@ -79,10 +102,10 @@ public class JeopardyClient {
 				System.out.println(tempString);
 			}
 		}
-		//------------------------------------------------
 		
-		//STAGE I.III ------------------------------------
-		//For tracking player dollar amounts
+		//*****************************************************************\\
+		//							SCORE INIT 							   \\
+		//_________________________________________________________________\\
 		int tempInt = 0;
 		try {
 			tempInt = datInputStream.readInt();
@@ -95,37 +118,51 @@ public class JeopardyClient {
 			playerDollars[i] = 0;
 		}
 				
-		//STAGE II
-		boolean gameRunning = false;
-		JeopardyForm newForm = null;
-		JeopardyGuessListener guessListener = null;
-		JeopardyAnswerListener answerListener = null;
-		JeopardyGuesser jeopardyGuesser = new JeopardyGuesser(playerID, objOutputStream);
-		Thread guesserThread = null;
-		guessListener = new JeopardyGuessListener();
-		answerListener = new JeopardyAnswerListener(playerDollars, playerID, objOutputStream);
-		guesserThread = new Thread(jeopardyGuesser);
+		//*****************************************************************\\
+		//							THREAD INITS    					   \\
+		//_________________________________________________________________\\
+		boolean gameRunning = false;																//For loop control, checks to see if game is still going
+		JeopardyForm newForm = null;																//Form to be grabbed from the server
+		JeopardyGuessListener guessListener = null;													//Listens to other peoples guesses
+		JeopardyAnswerListener answerListener = null;												//Listens to correct answers
+		JeopardyGuesser jeopardyGuesser = new JeopardyGuesser(playerID, objOutputStream);			//Sends user guesses
+		Thread guesserThread = null;																//Thread to send user guesses
+		guessListener = new JeopardyGuessListener();												//init
+		answerListener = new JeopardyAnswerListener(playerDollars, playerID, objOutputStream);		//init
+		guesserThread = new Thread(jeopardyGuesser);												//init
 		
+		//*****************************************************************\\
+		//							GAME LOOP		 					   \\
+		//_________________________________________________________________\\
 		while(!gameRunning) {
 
+			//Get new form. If you can't, it means the game has ended
 			try {
 				newForm = (JeopardyForm) objInputStream.readObject();
-			} catch (IOException e) {
+			} 
+			//If form wasn't caught, game has ended
+			catch (IOException e) {
 				System.out.println("Game has ended\n");
-				printResults(playerDollars.length);				
+				printResults(playerDollars.length);	
+				
 				try {
+					//Cleanup
 					objOutputStream.close();
 					objInputStream.close();
 					datInputStream.close();
 					datOutputStream.close();
 					socket.close();
+					
+					//Join threads if they are alive
 					if(guesserThread.isAlive()) {
+						
 						try {
 							guesserThread.join();
 						} catch (InterruptedException e1) {
 							// TODO Auto-generated catch block
 							e1.printStackTrace();
 						}
+						
 					}
 				} catch (IOException ee) {
 					ee.printStackTrace();
@@ -139,13 +176,15 @@ public class JeopardyClient {
 				System.out.println("Write your guess:");
 			}
 			else {
+				//If correct answer update
 				if(newForm.returnFormType() == 2)
 					answerListener.update(newForm);
+				//If incorrect guess update
 				if(newForm.returnFormType() == 1)
 					guessListener.update(newForm);	
 			}
 			
-			//Start guessing if we haven't
+			//Start guessing thread if we haven't
 			if(!guesserThread.isAlive())
 				guesserThread.start();
 		}
